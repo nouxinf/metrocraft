@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Metrocraft</title>
+    <meta name="theme-color" content="#0b0c0e" />
+    <link data-trunk rel="rust" />
+    <link data-trunk rel="copy-file" href="assets/icon.png" data-target-path="assets" />
+    <link rel="icon" href="assets/icon.png" />
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background: #0b0c0e;
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            touch-action: none;
+        }
+        canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            outline: none;
+        }
+        #loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            align-items: center;
+            justify-content: center;
+            color: #6a6f77;
+            letter-spacing: 0.22em;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .ring {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 1.5px solid #e9c46a;
+            border-top-color: transparent;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        noscript { color: #a0a4ab; }
+    </style>
+</head>
+<body>
+    <canvas id="the_canvas_id"></canvas>
+    <div id="loading">
+        <div class="ring"></div>
+        <div>Metrocraft</div>
+        <noscript>JavaScript is required to run this map editor.</noscript>
+    </div>
+</body>
+</html>
