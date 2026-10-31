@@ -113,6 +113,13 @@ impl Keys {
         *self = Self::default();
     }
 
+    /// Whether `action` is a command on a held modifier rather than a bare
+    /// key, so a field with the keys still has to let it through.
+    pub fn modified(&self, action: Action) -> bool {
+        self.bind(action)
+            .is_some_and(|shortcut| shortcut.modifiers.any())
+    }
+
     /// Whether `action`'s key, and only its modifiers, went down this frame.
     pub fn pressed(&self, action: Action, input: &InputState) -> bool {
         self.bind(action).is_some_and(|shortcut| {
@@ -194,6 +201,14 @@ mod tests {
             keys.bind(Action::Fit),
             Some(KeyboardShortcut::new(Modifiers::NONE, Key::F))
         );
+    }
+
+    #[test]
+    fn only_commands_on_a_modifier_survive_a_field_with_the_keys() {
+        let keys = Keys::default();
+        assert!(keys.modified(Action::Save));
+        assert!(keys.modified(Action::Preferences));
+        assert!(!keys.modified(Action::Fit));
     }
 
     #[test]

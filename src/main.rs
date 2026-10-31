@@ -1,12 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app;
+mod bns;
 mod keys;
+mod metrodreamin;
 mod model;
 mod platform;
 mod theme;
 mod tiles;
 mod view;
+#[cfg(windows)]
+mod window_menu;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
