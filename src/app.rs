@@ -4758,7 +4758,12 @@ fn dots(painter: &Painter, points: &[Pos2], stroke: Stroke, spacing: f32, radius
 /// the shapes' outline rather than larger shapes, so a heart keeps its notch
 /// instead of blurring into a blob.
 fn stamp(painter: &Painter, points: &[Pos2], stroke: Stroke, pattern: Pattern, scale: f32) {
-    let radius = scale * 0.62;
+    // A circle carries more ink than a star or a plus of the same span, so it
+    // is cut to sit with the stroke instead of swelling over it.
+    let radius = match pattern {
+        Pattern::Circle => scale * 0.46,
+        _ => scale * 0.62,
+    };
     let casing = stroke.width > scale + 0.5;
     let fill = if casing {
         Color32::TRANSPARENT
