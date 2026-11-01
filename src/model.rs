@@ -216,16 +216,14 @@ impl<'de> Deserialize<'de> for Mode {
 }
 
 /// How a line is stroked, whatever it carries. Left to the mode, a line runs
-/// the way its mode does; set outright, any line can run solid, dashed, dotted,
-/// or as a chain of shapes stamped along its route, the ones MetroDreamin'
-/// offers.
+/// the way its mode does; set outright, any line can run solid, dashed, or as a
+/// chain of shapes stamped along its route, the ones MetroDreamin' offers.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Pattern {
     #[default]
     Auto,
     Solid,
     Dashed,
-    Dotted,
     Circle,
     Diamond,
     Plus,
@@ -234,11 +232,10 @@ pub enum Pattern {
 }
 
 impl Pattern {
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 8] = [
         Self::Auto,
         Self::Solid,
         Self::Dashed,
-        Self::Dotted,
         Self::Circle,
         Self::Diamond,
         Self::Plus,
@@ -251,7 +248,6 @@ impl Pattern {
             Self::Auto => "AUTO",
             Self::Solid => "SOLID",
             Self::Dashed => "DASHED",
-            Self::Dotted => "DOTTED",
             Self::Circle => "CIRCLE",
             Self::Diamond => "DIAMOND",
             Self::Plus => "PLUS",
@@ -265,7 +261,9 @@ impl Pattern {
             "AUTO" => Self::Auto,
             "SOLID" => Self::Solid,
             "DASHED" => Self::Dashed,
-            "DOTTED" => Self::Dotted,
+            // A map saved when dots were a pattern of their own still reads as
+            // the circle it looked like.
+            "DOTTED" => Self::Circle,
             "CIRCLE" => Self::Circle,
             "DIAMOND" => Self::Diamond,
             "PLUS" => Self::Plus,
@@ -280,7 +278,6 @@ impl Pattern {
             Self::Auto => "Auto",
             Self::Solid => "Solid",
             Self::Dashed => "Dashed",
-            Self::Dotted => "Dotted",
             Self::Circle => "Circle",
             Self::Diamond => "Diamond",
             Self::Plus => "Plus",
@@ -365,7 +362,7 @@ pub struct Line {
     pub width: f32,
     /// What the line carries: metro, tram, bus, ferry, and the rest.
     pub mode: Mode,
-    /// How the line is stroked: as its mode runs, or solid, dashed or dotted
+    /// How the line is stroked: as its mode runs, or solid, dashed or a shape
     /// whatever it carries.
     pub pattern: Pattern,
     /// Stops and shaping waypoints, in travel order.
@@ -1144,6 +1141,10 @@ mod tests {
             serde_json::from_str::<Line>(&none).unwrap().pattern,
             Pattern::Auto
         );
+
+        // Dots were a pattern of their own until the circle covered them, and
+        // a map that carries one still reads as that circle.
+        assert_eq!(Pattern::from_key("DOTTED"), Some(Pattern::Circle));
 
         // A shape is a pattern too, written as MetroDreamin' names it.
         let shaped = Line {

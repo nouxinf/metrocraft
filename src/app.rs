@@ -4704,8 +4704,8 @@ fn thin_points(points: &[Pos2], tolerance: f32) -> Vec<Pos2> {
     kept
 }
 
-/// Stroke a stretch of route: solid, dashed, dotted or stamped with a shape as
-/// the line's own pattern says, or, left to the mode, the way its mode runs -
+/// Stroke a stretch of route: solid, dashed or stamped with a shape as the
+/// line's own pattern says, or, left to the mode, the way its mode runs -
 /// solid for rail, dashes for road, a chain of dots for water and cable, long
 /// dashes in the air.
 fn paint_run(
@@ -4722,7 +4722,6 @@ fn paint_run(
             painter.add(Shape::line(points.to_vec(), stroke));
         }
         Pattern::Dashed => dash(painter, points, stroke, scale * 3.0, scale * 2.0),
-        Pattern::Dotted => dots(painter, points, stroke, scale * 1.8, 0.34),
         Pattern::Circle | Pattern::Diamond | Pattern::Plus | Pattern::Star | Pattern::Heart => {
             stamp(painter, points, stroke, pattern, scale);
         }

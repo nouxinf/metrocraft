@@ -56,7 +56,7 @@ appears beside it.
 | New line | `+` in the `Lines` box |
 | Rename or recolour a line | open `Lines`, pick the line; the colour well opens a picker, the field takes a hex code |
 | Change what a line carries | the mode under its colour: metro, light rail, tram, commuter rail, intercity rail, high-speed rail, bus rapid transit, bus, ferry, gondola or air |
-| Set how a line is stroked | the pattern under its mode: Auto, Solid, Dashed or Dotted |
+| Set how a line is stroked | the pattern under its mode: Auto, Solid, Dashed or a shape |
 | Delete a line | the bin beside its name in `Lines` |
 | Move the `Lines` box | drag it by its header |
 | Select / move | click a node or line; drag a node to move it; drag bare ground to pan |
@@ -96,8 +96,8 @@ it started, so the route runs as a circle through it. `Lines` → the line →
 Each line carries a mode, from `Metro` to `Air`. Rail runs solid, road runs
 dashed, water and cable run as a chain of beads, and air runs in long dashes, so
 a map says what each line is without a legend. A pattern set by hand overrides
-that: `Solid`, `Dashed` or `Dotted` runs that way whatever the line carries,
-and `Auto` leaves it to the mode.
+that: `Solid`, `Dashed` or a shape runs that way whatever the line carries, and
+`Auto` leaves it to the mode.
 
 The `Lines` box starts folded to a tab in the top-left corner; open it with the
 chevron, drag it anywhere by its header, and use it to create lines and edit
