@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 use serde_json::{Map, Value};
 
-use crate::model::{Elevation, GeoPos, Id, Mode, Node, Project, Transfer};
+use crate::model::{Elevation, GeoPos, Id, Mode, Node, Pattern, Project, Transfer};
 
 /// The published database every map link points at.
 const ON_FIRESTORE: &str =
@@ -537,9 +537,17 @@ pub fn convert(title: &str, map: &Value) -> Result<Project, String> {
             .get("lineGroupId")
             .and_then(Value::as_str)
             .and_then(|group| groups.get(group).copied());
+        // A patterned line in MetroDreamin' is a solid line with a shape
+        // stamped along it; a line with no icon is solid.
+        let pattern = line
+            .get("icon")
+            .and_then(Value::as_str)
+            .and_then(Pattern::from_key)
+            .unwrap_or(Pattern::Solid);
 
         if let Some(line) = project.lines.get_mut(&id) {
             line.mode = mode;
+            line.pattern = pattern;
             line.nodes = route;
             line.closed = closed;
             line.turnback = turnback;

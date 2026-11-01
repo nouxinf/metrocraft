@@ -122,7 +122,8 @@ line's mode is MetroDreamin's list — metro, light rail, tram, commuter,
 intercity, high-speed rail, bus rapid transit, bus, ferry, gondola, air — and it
 is how the line is stroked: rail solid, road dashed, water and cable as beads,
 air in long dashes; a line set to a pattern of its own runs solid, dashed or
-dotted whatever it carries. Groups are foldable headings that can keep their lines off
+dotted, or as a chain of shapes — circle, diamond, plus, star, heart — whatever
+it carries. Groups are foldable headings that can keep their lines off
 the map. `Edit` →
 `Preferences` holds three categories down its left side: `Basemap`, one tile of
 the same place per basemap, `Theme` (`Dark`, `Light`), and `Keys`, one row per

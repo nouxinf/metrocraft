@@ -4704,9 +4704,10 @@ fn thin_points(points: &[Pos2], tolerance: f32) -> Vec<Pos2> {
     kept
 }
 
-/// Stroke a stretch of route: solid, dashed or dotted as the line's own pattern
-/// says, or, left to the mode, the way its mode runs - solid for rail, dashes
-/// for road, a chain of dots for water and cable, long dashes in the air.
+/// Stroke a stretch of route: solid, dashed, dotted or stamped with a shape as
+/// the line's own pattern says, or, left to the mode, the way its mode runs -
+/// solid for rail, dashes for road, a chain of dots for water and cable, long
+/// dashes in the air.
 fn paint_run(
     painter: &Painter,
     points: &[Pos2],
@@ -4722,6 +4723,9 @@ fn paint_run(
         }
         Pattern::Dashed => dash(painter, points, stroke, scale * 3.0, scale * 2.0),
         Pattern::Dotted => dots(painter, points, stroke, scale * 1.8, 0.34),
+        Pattern::Circle | Pattern::Diamond | Pattern::Plus | Pattern::Star | Pattern::Heart => {
+            stamp(painter, points, stroke, pattern, scale);
+        }
         Pattern::Auto => match mode {
             Mode::Bus => dash(painter, points, stroke, scale * 1.6, scale * 1.1),
             Mode::Brt => dash(painter, points, stroke, scale * 3.0, scale * 1.5),
@@ -4746,6 +4750,117 @@ fn dots(painter: &Painter, points: &[Pos2], stroke: Stroke, spacing: f32, radius
     for shape in Shape::dotted_line(points, stroke.color, spacing, radius) {
         painter.add(shape);
     }
+}
+
+/// Stamp a pattern along a stretch: a chain of shapes in the stroke's colour,
+/// spaced by the line's own width. Both passes of a line - the casing beneath
+/// it and its colour - come through here, so their shapes sit on each other.
+fn stamp(painter: &Painter, points: &[Pos2], stroke: Stroke, pattern: Pattern, scale: f32) {
+    let radius = stroke.width * 0.62;
+    for centre in spaced_points(points, scale * 2.6) {
+        match pattern {
+            Pattern::Circle => {
+                painter.circle_filled(centre, radius, stroke.color);
+            }
+            Pattern::Diamond => {
+                painter.add(Shape::convex_polygon(
+                    diamond_points(centre, radius),
+                    stroke.color,
+                    Stroke::NONE,
+                ));
+            }
+            Pattern::Plus => paint_fan(painter, centre, &plus_points(centre, radius), stroke.color),
+            Pattern::Star => paint_fan(painter, centre, &star_points(centre, radius), stroke.color),
+            _ => paint_fan(painter, centre, &heart_points(centre, radius), stroke.color),
+        }
+    }
+}
+
+/// Points every `spacing` along a route, starting half a step in so the chain
+/// begins inside the route rather than on its very end.
+fn spaced_points(points: &[Pos2], spacing: f32) -> Vec<Pos2> {
+    let mut spaced = Vec::new();
+    if spacing <= f32::EPSILON {
+        return spaced;
+    }
+    let mut walked = 0.0;
+    let mut next = spacing * 0.5;
+    for pair in points.windows(2) {
+        let (from, to) = (pair[0], pair[1]);
+        let step = to - from;
+        let length = step.length();
+        if length <= f32::EPSILON {
+            continue;
+        }
+        while next <= walked + length {
+            spaced.push(from + step * ((next - walked) / length));
+            next += spacing;
+        }
+        walked += length;
+    }
+    spaced
+}
+
+/// Fill a shape that is star-shaped about `centre` - a plus, a star, a heart -
+/// as a fan of triangles, since egui only fills a polygon in one piece while
+/// it stays convex.
+fn paint_fan(painter: &Painter, centre: Pos2, outline: &[Pos2], color: Color32) {
+    for (index, point) in outline.iter().enumerate() {
+        painter.add(Shape::convex_polygon(
+            vec![centre, *point, outline[(index + 1) % outline.len()]],
+            color,
+            Stroke::NONE,
+        ));
+    }
+}
+
+fn plus_points(centre: Pos2, radius: f32) -> Vec<Pos2> {
+    let arm = radius * 0.42;
+    vec![
+        centre + Vec2::new(-arm, -radius),
+        centre + Vec2::new(arm, -radius),
+        centre + Vec2::new(arm, -arm),
+        centre + Vec2::new(radius, -arm),
+        centre + Vec2::new(radius, arm),
+        centre + Vec2::new(arm, arm),
+        centre + Vec2::new(arm, radius),
+        centre + Vec2::new(-arm, radius),
+        centre + Vec2::new(-arm, arm),
+        centre + Vec2::new(-radius, arm),
+        centre + Vec2::new(-radius, -arm),
+        centre + Vec2::new(-arm, -arm),
+    ]
+}
+
+fn star_points(centre: Pos2, radius: f32) -> Vec<Pos2> {
+    let mut points = Vec::with_capacity(10);
+    let step = std::f32::consts::PI / 5.0;
+    for index in 0..10 {
+        let angle = -std::f32::consts::FRAC_PI_2 + index as f32 * step;
+        let reach = if index % 2 == 0 {
+            radius
+        } else {
+            radius * 0.46
+        };
+        let (sin, cos) = angle.sin_cos();
+        points.push(centre + Vec2::new(cos * reach, sin * reach));
+    }
+    points
+}
+
+fn heart_points(centre: Pos2, radius: f32) -> Vec<Pos2> {
+    // The heart curve, sampled evenly and scaled to `radius` across, with its
+    // point hanging down the way a heart is drawn.
+    const STEPS: usize = 14;
+    let mut points = Vec::with_capacity(STEPS);
+    for index in 0..STEPS {
+        let t = index as f32 / STEPS as f32 * std::f32::consts::TAU;
+        let (sin, cos) = t.sin_cos();
+        let x = 16.0 * sin * sin * sin;
+        let y = 13.0 * cos - 5.0 * (2.0 * t).cos() - 2.0 * (3.0 * t).cos() - (4.0 * t).cos();
+        points.push(centre + Vec2::new(x, -y - 6.0) * (radius / 16.0));
+    }
+    points
 }
 
 /// The stretches of a route that cross `rect`, each with the point beyond

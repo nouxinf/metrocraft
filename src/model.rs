@@ -216,8 +216,9 @@ impl<'de> Deserialize<'de> for Mode {
 }
 
 /// How a line is stroked, whatever it carries. Left to the mode, a line runs
-/// the way its mode does; set outright, any line can run solid, dashed, or as
-/// a chain of dots.
+/// the way its mode does; set outright, any line can run solid, dashed, dotted,
+/// or as a chain of shapes stamped along its route, the ones MetroDreamin'
+/// offers.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Pattern {
     #[default]
@@ -225,10 +226,25 @@ pub enum Pattern {
     Solid,
     Dashed,
     Dotted,
+    Circle,
+    Diamond,
+    Plus,
+    Star,
+    Heart,
 }
 
 impl Pattern {
-    pub const ALL: [Self; 4] = [Self::Auto, Self::Solid, Self::Dashed, Self::Dotted];
+    pub const ALL: [Self; 9] = [
+        Self::Auto,
+        Self::Solid,
+        Self::Dashed,
+        Self::Dotted,
+        Self::Circle,
+        Self::Diamond,
+        Self::Plus,
+        Self::Star,
+        Self::Heart,
+    ];
 
     pub fn key(self) -> &'static str {
         match self {
@@ -236,6 +252,11 @@ impl Pattern {
             Self::Solid => "SOLID",
             Self::Dashed => "DASHED",
             Self::Dotted => "DOTTED",
+            Self::Circle => "CIRCLE",
+            Self::Diamond => "DIAMOND",
+            Self::Plus => "PLUS",
+            Self::Star => "STAR",
+            Self::Heart => "HEART",
         }
     }
 
@@ -245,6 +266,11 @@ impl Pattern {
             "SOLID" => Self::Solid,
             "DASHED" => Self::Dashed,
             "DOTTED" => Self::Dotted,
+            "CIRCLE" => Self::Circle,
+            "DIAMOND" => Self::Diamond,
+            "PLUS" => Self::Plus,
+            "STAR" => Self::Star,
+            "HEART" => Self::Heart,
             _ => return None,
         })
     }
@@ -255,6 +281,11 @@ impl Pattern {
             Self::Solid => "Solid",
             Self::Dashed => "Dashed",
             Self::Dotted => "Dotted",
+            Self::Circle => "Circle",
+            Self::Diamond => "Diamond",
+            Self::Plus => "Plus",
+            Self::Star => "Star",
+            Self::Heart => "Heart",
         }
     }
 }
@@ -1112,6 +1143,18 @@ mod tests {
         assert_eq!(
             serde_json::from_str::<Line>(&none).unwrap().pattern,
             Pattern::Auto
+        );
+
+        // A shape is a pattern too, written as MetroDreamin' names it.
+        let shaped = Line {
+            pattern: Pattern::Heart,
+            ..Line::default()
+        };
+        let json = serde_json::to_string(&shaped).unwrap();
+        assert!(json.contains("\"pattern\":\"HEART\""));
+        assert_eq!(
+            serde_json::from_str::<Line>(&json).unwrap().pattern,
+            Pattern::Heart
         );
     }
 
