@@ -4753,56 +4753,44 @@ fn dots(painter: &Painter, points: &[Pos2], stroke: Stroke, spacing: f32, radius
 }
 
 /// Stamp a pattern along a stretch: a chain of shapes in the stroke's colour,
-/// spaced by the line's own width. Both passes of a line - the casing beneath
-/// it and its colour - come through here at the same size: the wider pass draws
-/// the shapes' outline rather than larger shapes, so a heart keeps its notch
-/// instead of blurring into a blob.
+/// spaced by the line's own width. A stamped line carries no casing - a rim a
+/// pixel or two wide on a shape this small reads as grain - so the casing pass
+/// draws nothing and the shapes sit straight on the map.
 fn stamp(painter: &Painter, points: &[Pos2], stroke: Stroke, pattern: Pattern, scale: f32) {
+    if stroke.width > scale + 0.5 {
+        return;
+    }
     // A circle carries more ink than a star or a plus of the same span, so it
     // is cut to sit with the stroke instead of swelling over it.
     let radius = match pattern {
         Pattern::Circle => scale * 0.46,
         _ => scale * 0.62,
     };
-    let casing = stroke.width > scale + 0.5;
-    let fill = if casing {
-        Color32::TRANSPARENT
-    } else {
-        stroke.color
-    };
-    let edge = Stroke::new(
-        if casing {
-            (radius * 0.32).max(0.8)
-        } else {
-            0.0
-        },
-        stroke.color,
-    );
     for centre in spaced_points(points, scale * 2.6) {
         match pattern {
             Pattern::Circle => {
-                painter.circle(centre, radius, fill, edge);
+                painter.circle_filled(centre, radius, stroke.color);
             }
             Pattern::Diamond => {
                 painter.add(Shape::convex_polygon(
                     diamond_points(centre, radius),
-                    fill,
-                    edge,
+                    stroke.color,
+                    Stroke::NONE,
                 ));
             }
-            Pattern::Plus | Pattern::Star | Pattern::Heart => {
+            Pattern::Plus => {
+                // Two bars of one colour, so the cross meets without a seam.
+                for bar in plus_bars(centre, radius) {
+                    painter.rect_filled(bar, 0.0, stroke.color);
+                }
+            }
+            _ => {
                 let outline = match pattern {
-                    Pattern::Plus => plus_points(centre, radius),
                     Pattern::Star => star_points(centre, radius),
                     _ => heart_points(centre, radius),
                 };
-                if casing {
-                    painter.add(Shape::closed_line(outline, edge));
-                } else {
-                    paint_fan(painter, centre, &outline, fill);
-                }
+                painter.add(fan_mesh(centre, &outline, stroke.color));
             }
-            _ => {}
         }
     }
 }
@@ -4832,34 +4820,30 @@ fn spaced_points(points: &[Pos2], spacing: f32) -> Vec<Pos2> {
     spaced
 }
 
-/// Fill a shape that is star-shaped about `centre` - a plus, a star, a heart -
-/// as a fan of triangles, since egui only fills a polygon in one piece while
-/// it stays convex.
-fn paint_fan(painter: &Painter, centre: Pos2, outline: &[Pos2], color: Color32) {
-    for (index, point) in outline.iter().enumerate() {
-        painter.add(Shape::convex_polygon(
-            vec![centre, *point, outline[(index + 1) % outline.len()]],
-            color,
-            Stroke::NONE,
-        ));
+/// Fill a shape that is star-shaped about `centre` - a star or a heart - as a
+/// fan of triangles. egui fills a polygon in one piece only while it stays
+/// convex, and separate triangles would each feather their own edge, leaving
+/// seams across the shape; as one mesh the triangles share their vertices and
+/// the shape fills solid.
+fn fan_mesh(centre: Pos2, outline: &[Pos2], color: Color32) -> Shape {
+    let mut mesh = eframe::egui::Mesh::default();
+    mesh.colored_vertex(centre, color);
+    for point in outline {
+        mesh.colored_vertex(*point, color);
     }
+    for index in 0..outline.len() {
+        let next = (index + 1) % outline.len();
+        mesh.add_triangle(0, index as u32 + 1, next as u32 + 1);
+    }
+    Shape::Mesh(mesh.into())
 }
 
-fn plus_points(centre: Pos2, radius: f32) -> Vec<Pos2> {
+/// The two bars a plus is made of, each a rectangle across the middle.
+fn plus_bars(centre: Pos2, radius: f32) -> [Rect; 2] {
     let arm = radius * 0.42;
-    vec![
-        centre + Vec2::new(-arm, -radius),
-        centre + Vec2::new(arm, -radius),
-        centre + Vec2::new(arm, -arm),
-        centre + Vec2::new(radius, -arm),
-        centre + Vec2::new(radius, arm),
-        centre + Vec2::new(arm, arm),
-        centre + Vec2::new(arm, radius),
-        centre + Vec2::new(-arm, radius),
-        centre + Vec2::new(-arm, arm),
-        centre + Vec2::new(-radius, arm),
-        centre + Vec2::new(-radius, -arm),
-        centre + Vec2::new(-arm, -arm),
+    [
+        Rect::from_center_size(centre, Vec2::new(arm * 2.0, radius * 2.0)),
+        Rect::from_center_size(centre, Vec2::new(radius * 2.0, arm * 2.0)),
     ]
 }
 
