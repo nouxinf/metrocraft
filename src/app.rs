@@ -4754,24 +4754,50 @@ fn dots(painter: &Painter, points: &[Pos2], stroke: Stroke, spacing: f32, radius
 
 /// Stamp a pattern along a stretch: a chain of shapes in the stroke's colour,
 /// spaced by the line's own width. Both passes of a line - the casing beneath
-/// it and its colour - come through here, so their shapes sit on each other.
+/// it and its colour - come through here at the same size: the wider pass draws
+/// the shapes' outline rather than larger shapes, so a heart keeps its notch
+/// instead of blurring into a blob.
 fn stamp(painter: &Painter, points: &[Pos2], stroke: Stroke, pattern: Pattern, scale: f32) {
-    let radius = stroke.width * 0.62;
+    let radius = scale * 0.62;
+    let casing = stroke.width > scale + 0.5;
+    let fill = if casing {
+        Color32::TRANSPARENT
+    } else {
+        stroke.color
+    };
+    let edge = Stroke::new(
+        if casing {
+            (radius * 0.32).max(0.8)
+        } else {
+            0.0
+        },
+        stroke.color,
+    );
     for centre in spaced_points(points, scale * 2.6) {
         match pattern {
             Pattern::Circle => {
-                painter.circle_filled(centre, radius, stroke.color);
+                painter.circle(centre, radius, fill, edge);
             }
             Pattern::Diamond => {
                 painter.add(Shape::convex_polygon(
                     diamond_points(centre, radius),
-                    stroke.color,
-                    Stroke::NONE,
+                    fill,
+                    edge,
                 ));
             }
-            Pattern::Plus => paint_fan(painter, centre, &plus_points(centre, radius), stroke.color),
-            Pattern::Star => paint_fan(painter, centre, &star_points(centre, radius), stroke.color),
-            _ => paint_fan(painter, centre, &heart_points(centre, radius), stroke.color),
+            Pattern::Plus | Pattern::Star | Pattern::Heart => {
+                let outline = match pattern {
+                    Pattern::Plus => plus_points(centre, radius),
+                    Pattern::Star => star_points(centre, radius),
+                    _ => heart_points(centre, radius),
+                };
+                if casing {
+                    painter.add(Shape::closed_line(outline, edge));
+                } else {
+                    paint_fan(painter, centre, &outline, fill);
+                }
+            }
+            _ => {}
         }
     }
 }
