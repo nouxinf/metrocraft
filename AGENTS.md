@@ -3,6 +3,11 @@
 Transit map editor in Rust + egui, drawn on a real basemap. Windows, Linux and
 the browser (WASM) from one codebase.
 
+## Build
+
+- After every feature, rebuild the Windows build. It has to compile before the
+  work is reported done.
+
 ## Git
 
 - Every new feature ends in a commit and a push. Both land before the work is
