@@ -21,6 +21,9 @@ const ON_FIRESTORE: &str =
 /// their security rules allow, which for a published map is reading it.
 const KEY: &str = "AIzaSyBIMlulR8OTOoF-57DHty1NuXM0kqVoL5c";
 const FALLBACK_COLOR: [u8; 3] = [235, 87, 87];
+/// MetroDreamin' strokes every line at eight pixels, and the shapes it stamps
+/// along one are sized from that stroke, so an import keeps the width too.
+const LINE_WIDTH: f32 = 8.0;
 
 /// An import in flight. The result arrives on the channel once.
 pub struct Import {
@@ -548,6 +551,7 @@ pub fn convert(title: &str, map: &Value) -> Result<Project, String> {
         if let Some(line) = project.lines.get_mut(&id) {
             line.mode = mode;
             line.pattern = pattern;
+            line.width = LINE_WIDTH;
             line.nodes = route;
             line.closed = closed;
             line.turnback = turnback;
@@ -830,6 +834,8 @@ mod tests {
         // A line with no mode of its own is a metro line.
         assert_eq!(spur.mode, Mode::Rapid);
         assert_eq!(spur.color, FALLBACK_COLOR);
+        // A line comes across as wide as MetroDreamin' strokes it.
+        assert_eq!(spur.width, LINE_WIDTH);
         assert_eq!(spur.group, None);
 
         // The pair walked between keeps its two stations.
@@ -987,6 +993,83 @@ mod tests {
         );
         assert!(maps.iter().all(|map| map.id.starts_with("M01")));
         assert!(collect(&serde_json::json!([])).is_empty());
+    }
+
+    /// Reads a published map over the network, as an import does.
+    fn published(id: &str) -> Project {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        read(
+            id.to_owned(),
+            Box::new(move |result| {
+                let _ = sender.send(result);
+            }),
+        );
+        receiver
+            .recv_timeout(std::time::Duration::from_secs(90))
+            .expect("the read should answer")
+            .expect("the map should convert")
+    }
+
+    /// Reads real published maps whose lines carry shapes, so the shape import
+    /// is checked against MetroDreamin' itself and not only against a map
+    /// written here. Run it with
+    /// `cargo test a_shaped_map -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn a_shaped_map_comes_across() {
+        let maps = [
+            // A single circle of a whole network.
+            "M0FiVzRVMVpvYVFRSXcwb2xGblVUR2NYWEFEMnw3Mg==",
+            // Circles and stars across thirty lines.
+            "M0FiVzRVMVpvYVFRSXcwb2xGblVUR2NYWEFEMnw3NQ==",
+            "M0FiVzRVMVpvYVFRSXcwb2xGblVUR2NYWEFEMnw4Ng==",
+            // Circle, diamond and plus on one map.
+            "M0M5UkdDaUFKOWVZVmxMb3ExMkg1czF5TzgxM3w4",
+            // Hearts.
+            "M1JhV3JFcnZ2ZE1YekRKeXJ3UU53QTJMaHo1Mnwx",
+            "M1U0dVVBbXlzbFJSNUVtTjN0ejhWZGxmWWt5MXwx",
+        ];
+        let mut seen: std::collections::HashMap<&'static str, usize> =
+            std::collections::HashMap::new();
+        for id in maps {
+            let project = published(id);
+            let (mut shaped, mut solid) = (0, 0);
+            for line in project.lines.values() {
+                match line.pattern {
+                    Pattern::Solid => solid += 1,
+                    shaped_here => {
+                        assert!(
+                            matches!(
+                                shaped_here,
+                                Pattern::Circle
+                                    | Pattern::Diamond
+                                    | Pattern::Plus
+                                    | Pattern::Star
+                                    | Pattern::Heart
+                            ),
+                            "{id}: `{}` came across as {shaped_here:?}",
+                            line.name
+                        );
+                        shaped += 1;
+                    }
+                }
+                *seen.entry(line.pattern.key()).or_default() += 1;
+                // A line comes across as wide as MetroDreamin' strokes it.
+                assert_eq!(line.width, LINE_WIDTH, "{id}: `{}`", line.name);
+            }
+            println!(
+                "{id}: {} lines, {shaped} shaped, {solid} solid",
+                project.lines.len()
+            );
+            assert!(shaped > 0, "{id}: the map's shaped lines come across");
+        }
+        // Every shape MetroDreamin' offers sits on one of these maps.
+        for shape in ["CIRCLE", "DIAMOND", "PLUS", "STAR", "HEART"] {
+            assert!(
+                seen.get(shape).copied().unwrap_or(0) > 0,
+                "no {shape} came across: {seen:?}"
+            );
+        }
     }
 
     /// Lists a real account over the network, both ways. Run it with
