@@ -871,6 +871,51 @@ mod tests {
         assert!(project.lines.values().any(|line| line.nodes.len() > 10));
     }
 
+    /// Every shape MetroDreamin' strokes a line with - `LINE_ICON_SHAPES` in
+    /// its own source, written lowercase - and, with none or with an icon that
+    /// is not a shape, a solid line.
+    #[test]
+    fn every_line_shape_comes_across() {
+        let shapes = [
+            ("circle", Pattern::Circle),
+            ("diamond", Pattern::Diamond),
+            ("heart", Pattern::Heart),
+            ("plus", Pattern::Plus),
+            ("star", Pattern::Star),
+            ("", Pattern::Solid),
+            ("BUS", Pattern::Solid),
+        ];
+        let mut lines = Map::new();
+        for (index, (icon, _)) in shapes.iter().enumerate() {
+            let mut line = serde_json::json!({
+                "id": index.to_string(),
+                "name": index.to_string(),
+                "stationIds": ["0", "1"],
+            });
+            if !icon.is_empty() {
+                line["icon"] = serde_json::json!(*icon);
+            }
+            lines.insert(index.to_string(), line);
+        }
+        let map = serde_json::json!({
+            "stations": {
+                "0": {"id": "0", "name": "Alpha", "lat": 51.5, "lng": -0.1},
+                "1": {"id": "1", "name": "Bravo", "lat": 51.51, "lng": -0.12}
+            },
+            "lines": Value::Object(lines)
+        });
+
+        let project = convert("Shapes", &map).unwrap();
+        for (index, (icon, pattern)) in shapes.iter().enumerate() {
+            let line = project
+                .lines
+                .values()
+                .find(|line| line.name == index.to_string())
+                .expect("the line is in the map");
+            assert_eq!(line.pattern, *pattern, "a line carrying `{icon}`");
+        }
+    }
+
     #[test]
     fn an_empty_map_is_refused() {
         let empty = serde_json::json!({"stations": {}, "lines": {}});
